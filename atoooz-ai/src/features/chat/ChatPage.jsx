@@ -1,47 +1,52 @@
-import { useState } from "react";
-import { sendChatMessage } from "../../api/chatApi";
+import { useEffect, useMemo, useRef } from "react";
+import { useDispatch, useSelector } from "react-redux";
+import Sidebar from "./components/Sidebar";
+import WelcomeView from "./components/WelcomeView";
+import MessageList from "./components/MessageList";
+import ChatInput from "./components/ChatInput";
+import { createNewChat, sendMessage, setActiveChat } from "../../store/slices/chatSlice";
+import { fetchReminders } from "../../store/slices/reminderSlice";
+import "./ChatPage.css";
 
 export default function ChatPage() {
-    const[input, setInput] = useState("");
-    const [message, setMessage] = useState([]);
-    const [loading, setLoading] = useState(false);
+  const dispatch = useDispatch();
+  const bottomRef = useRef(null);
 
-    const onSend = async () => {
-        if (!input.trim()) return;
+  const { chats, activeChatId, loading } = useSelector((state) => state.chat);
 
-        const userText = input.trim();
-        setMessage((prev) => [...prev, { text: userText, sender: "user" }]);
-        setInput("");
-        setLoading(true);
+  const activeChat = useMemo(
+    () => chats.find((c) => c.id === activeChatId) || chats[0],
+    [chats, activeChatId]
+  );
 
-        try{
-            const answer = await sendChatMessage(userText);
-            setMessage((prev) => [...prev, { text: answer, sender: "bot" }]);   
-        } catch (error) {
-            setMessage((prev) => [...prev, { text: "Error: " + error.message, sender: "bot" }]);    
-        } finally {
-            setLoading(false);
-        }
-    };
+  const messages = activeChat?.messages || [];
 
-    return (  
-        <div className="chat-shell">
-            <h2>Chat with AI</h2>
-            <div className="chat-BOX">
-                {message.map((m, i) => (
-                    <p key={i}><b>{m.role === "user" ? "you" : "AI"}</b>: {m.text}</p>
-                ))}
-                {loading && <p><i>AI is typing...</i></p>}
-            </div>
-            <div className="chat-input-row">
-                <input
-                    value={input}
-                    onChange={(e) => setInput(e.target.value)}
-                    placeholder="Ask me Anythingggg........"
-                    onKeyDown={(e) => e.key === "Enter" && onSend()}
-                />
-                <button onClick={onSend} disabled={loading}>{loading ? "Sending..." : "Send" }</button>
-            </div>
-        </div>
-    );
+  useEffect(() => {
+    bottomRef.current?.scrollIntoView({ behavior: "smooth" });
+  }, [messages, loading]);
+
+  useEffect(() => {
+    dispatch(fetchReminders());
+  }, [dispatch]);
+
+  return (
+    <div className="app-shell">
+      <Sidebar
+        chats={chats}
+        activeChatId={activeChatId}
+        onNewChat={() => dispatch(createNewChat())}
+        onSelectChat={(id) => dispatch(setActiveChat(id))}
+      />
+
+      <main className="main">
+        {messages.length === 0 ? (
+          <WelcomeView onPick={(text) => dispatch(sendMessage(text))} />
+        ) : (
+          <MessageList messages={messages} loading={loading} bottomRef={bottomRef} />
+        )}
+
+        <ChatInput loading={loading} onSend={(text) => dispatch(sendMessage(text))} />
+      </main>
+    </div>
+  );
 }

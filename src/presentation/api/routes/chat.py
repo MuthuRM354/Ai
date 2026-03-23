@@ -24,7 +24,8 @@ def options_chat():
 @router.post("/chat", response_model=ChatResponse)
 def chat(req: ChatRequest):
     try:
-        answer = use_case.execute(req.message)
+        history =  [m.model_dump() for m in req.history] if req.history else []
+        answer = use_case.execute(req.message, history)
         return ChatResponse(answer=answer)
     except ValueError as err:
         raise HTTPException(status_code=400, detail=str(err))
