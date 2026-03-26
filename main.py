@@ -158,7 +158,9 @@
 # if __name__ == "__main__":
 #     main()
 
+
 from src.llm import get_llm
+
 
 def main():
     try:
@@ -168,15 +170,17 @@ def main():
         print("\nAnswer:\n", response.content)
     except Exception as e:
         print("Error:", e)
+        return
 
     save = input("Do you want to save the response to a file? (yes/no): ")
-    if save.lower() == "yes":  
+    if save.lower() == "yes":
         filename = input("Enter the filename to save the response: ")
         try:
             with open(filename, "w") as f:
                 f.write(response.content)
         except Exception as e:
             print("Error saving file:", e)
+
 
 if __name__ == "__main__":
     main()

@@ -10,6 +10,7 @@ import {
 const initialState = {
   items: [],
   loading: false,
+  status: "idle",
   error: null,
 };
 
@@ -21,6 +22,12 @@ export const fetchReminders = createAsyncThunk(
     } catch (err) {
       return rejectWithValue(err?.message || "Failed to fetch reminders");
     }
+  },
+  {
+    condition: (_, { getState }) => {
+      const { reminders } = getState();
+      return reminders.status === "idle"; // only first auto-load
+    },
   }
 );
 
@@ -77,15 +84,18 @@ const reminderSlice = createSlice({
     builder
       .addCase(fetchReminders.pending, (state) => {
         state.loading = true;
+        state.status = "loading";
         state.error = null;
       })
       .addCase(fetchReminders.fulfilled, (state, action) => {
         state.loading = false;
+        state.status = "succeeded";
         state.items = action.payload;
       })
       .addCase(fetchReminders.rejected, (state, action) => {
         state.loading = false;
-        state.error = action.payload || action.error.message;
+        state.status = "failed";
+        state.error = action.payload || action.error.message || "Failed to fetch reminders";
       })
       .addCase(addReminder.fulfilled, (state, action) => {
         state.items.push(action.payload);

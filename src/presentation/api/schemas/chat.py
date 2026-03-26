@@ -1,15 +1,15 @@
 from typing import List
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 
 class Message(BaseModel):
-    role: str       
+    role: str
     content: str
 
 
 class ChatRequest(BaseModel):
     message: str
-    history: List[Message] = []
+    history: List[Message] = Field(default_factory=list)
 
 
 class ChatResponse(BaseModel):

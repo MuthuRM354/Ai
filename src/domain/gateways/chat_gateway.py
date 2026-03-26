@@ -1,6 +1,6 @@
-from typing import Protocol
+from typing import Any, Protocol
 
 class ChatGateway(Protocol):
-    def send_message(self, message: str) -> str:
-        """Sends a message to the chat model and returns the response."""
+   def ask(self, message: str, history: list[dict[str, Any]] | None = None) -> str:
+        """Sends a message (with optional history) and returns the response."""
         pass

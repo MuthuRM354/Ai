@@ -1,7 +1,9 @@
 from datetime import datetime, timedelta
 from itertools import count
+from pathlib import Path
 from threading import Lock
 from typing import List, Optional
+import json
 import re
 
 from fastapi import APIRouter, HTTPException
@@ -15,9 +17,31 @@ from src.presentation.api.schemas.reminder import (
 
 router = APIRouter(prefix="/reminders", tags=["reminders"])
 
-_store: List[ReminderOut] = []
-_id_gen = count(1)
 _lock = Lock()
+_DATA_FILE = Path(__file__).resolve().parents[4] / "data" / "reminders.json"
+
+
+def _load_store() -> List[ReminderOut]:
+    if not _DATA_FILE.exists():
+        return []
+    try:
+        raw = json.loads(_DATA_FILE.read_text(encoding="utf-8"))
+        if not isinstance(raw, list):
+            return []
+        return [ReminderOut.model_validate(item) for item in raw]
+    except Exception:
+        return []
+
+
+def _save_store(items: List[ReminderOut]) -> None:
+    _DATA_FILE.parent.mkdir(parents=True, exist_ok=True)
+    payload = [item.model_dump(mode="json") for item in items]
+    _DATA_FILE.write_text(json.dumps(payload, indent=2), encoding="utf-8")
+
+
+_store: List[ReminderOut] = _load_store()
+_next_id = (max((item.id for item in _store), default=0) + 1)
+_id_gen = count(_next_id)
 
 
 class ReminderExtractRequest(BaseModel):
@@ -126,6 +150,7 @@ def create_reminder(payload: ReminderCreate):
             created_at=datetime.utcnow(),
         )
         _store.append(item)
+        _save_store(_store)
         return item
 
 
@@ -145,6 +170,7 @@ def extract_and_create_reminder(payload: ReminderExtractRequest):
             created_at=datetime.utcnow(),
         )
         _store.append(item)
+        _save_store(_store)
 
     return ReminderExtractResponse(
         matched=True,
@@ -161,6 +187,7 @@ def update_reminder(reminder_id: int, payload: ReminderUpdate):
             if item.id == reminder_id:
                 updated = item.model_copy(update={"completed": payload.completed})
                 _store[idx] = updated
+                _save_store(_store)
                 return updated
     raise HTTPException(status_code=404, detail="Reminder not found")
 
@@ -171,5 +198,6 @@ def delete_reminder(reminder_id: int):
         for idx, item in enumerate(_store):
             if item.id == reminder_id:
                 _store.pop(idx)
+                _save_store(_store)
                 return {"status": "deleted"}
     raise HTTPException(status_code=404, detail="Reminder not found")

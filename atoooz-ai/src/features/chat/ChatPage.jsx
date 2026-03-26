@@ -4,7 +4,11 @@ import Sidebar from "./components/Sidebar";
 import WelcomeView from "./components/WelcomeView";
 import MessageList from "./components/MessageList";
 import ChatInput from "./components/ChatInput";
-import { createNewChat, sendMessage, setActiveChat } from "../../store/slices/chatSlice";
+import {
+  createNewChat,
+  sendMessage,
+  setActiveChat,
+} from "../../store/slices/chatSlice";
 import { fetchReminders } from "../../store/slices/reminderSlice";
 import "./ChatPage.css";
 
@@ -13,6 +17,7 @@ export default function ChatPage() {
   const bottomRef = useRef(null);
 
   const { chats, activeChatId, loading } = useSelector((state) => state.chat);
+  const { status: remindersStatus } = useSelector((state) => state.reminders);
 
   const activeChat = useMemo(
     () => chats.find((c) => c.id === activeChatId) || chats[0],
@@ -26,8 +31,10 @@ export default function ChatPage() {
   }, [messages, loading]);
 
   useEffect(() => {
-    dispatch(fetchReminders());
-  }, [dispatch]);
+    if (remindersStatus === "idle") {
+      dispatch(fetchReminders());
+    }
+  }, [dispatch, remindersStatus]);
 
   return (
     <div className="app-shell">
@@ -42,7 +49,11 @@ export default function ChatPage() {
         {messages.length === 0 ? (
           <WelcomeView onPick={(text) => dispatch(sendMessage(text))} />
         ) : (
-          <MessageList messages={messages} loading={loading} bottomRef={bottomRef} />
+          <MessageList
+            messages={messages}
+            loading={loading}
+            bottomRef={bottomRef}
+          />
         )}
 
         <ChatInput loading={loading} onSend={(text) => dispatch(sendMessage(text))} />
