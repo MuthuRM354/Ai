@@ -4,16 +4,20 @@ export default function MessageList({ messages, loading, bottomRef }) {
   return (
     <div className="messages">
       {messages.map((m, i) => (
-        <div key={i} className={`message-row ${m.role}`}>
+        <div key={m.id ?? `${m.role}-${i}`} className={`message-row ${m.role}`}>
           <div className="avatar">{m.role === "user" ? "M" : "✦"}</div>
           <div className="message-content">
             <ReactMarkdown
               components={{
                 code({ inline, children, ...props }) {
                   return inline ? (
-                    <code className="inline-code" {...props}>{children}</code>
+                    <code className="inline-code" {...props}>
+                      {children}
+                    </code>
                   ) : (
-                    <pre className="code-block"><code {...props}>{children}</code></pre>
+                    <pre className="code-block">
+                      <code {...props}>{children}</code>
+                    </pre>
                   );
                 },
               }}

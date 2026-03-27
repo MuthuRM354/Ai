@@ -1,0 +1,8 @@
+fastapi
+uvicorn[standard]
+pydantic
+python-dotenv
+langchain-anthropic
+langchain-core
+pytest
+httpx

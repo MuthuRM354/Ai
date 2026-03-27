@@ -1,4 +1,4 @@
-import { createAsyncThunk, createSlice } from "@reduxjs/toolkit";
+import { createAsyncThunk, createSlice, nanoid } from "@reduxjs/toolkit";
 import { sendChatMessage } from "../../api/chatApi";
 import { extractReminderFromMessage } from "./reminderSlice";
 
@@ -11,6 +11,12 @@ const initialState = {
 
 const getActiveChat = (state) =>
   state.chats.find((c) => c.id === state.activeChatId);
+
+const createMessage = (role, content) => ({
+  id: nanoid(),
+  role,
+  content,
+});
 
 export const sendMessage = createAsyncThunk(
   "chat/sendMessage",
@@ -31,8 +37,6 @@ export const sendMessage = createAsyncThunk(
       reminderResult = null;
     }
 
-    // If the message was a reminder command and reminder was created,
-    // do NOT call the AI model. Show only one clean response.
     if (reminderResult?.matched && reminderResult?.reminder) {
       const dueText = reminderResult.reminder.due_at
         ? ` for ${new Date(reminderResult.reminder.due_at).toLocaleString()}`
@@ -75,7 +79,8 @@ const chatSlice = createSlice({
     addUserMessage(state, action) {
       const chat = getActiveChat(state);
       if (!chat) return;
-      chat.messages.push({ role: "user", content: action.payload });
+
+      chat.messages.push(createMessage("user", action.payload));
 
       if (chat.messages.length === 1) {
         const title = action.payload;
@@ -85,7 +90,8 @@ const chatSlice = createSlice({
     addAssistantMessage(state, action) {
       const chat = getActiveChat(state);
       if (!chat) return;
-      chat.messages.push({ role: "assistant", content: action.payload });
+
+      chat.messages.push(createMessage("assistant", action.payload));
     },
   },
   extraReducers: (builder) => {

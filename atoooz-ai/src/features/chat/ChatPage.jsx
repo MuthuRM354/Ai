@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef } from "react";
+import { useCallback, useEffect, useMemo, useRef } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import Sidebar from "./components/Sidebar";
 import WelcomeView from "./components/WelcomeView";
@@ -24,7 +24,25 @@ export default function ChatPage() {
     [chats, activeChatId]
   );
 
-  const messages = activeChat?.messages || [];
+  const messages = useMemo(() => activeChat?.messages ?? [], [activeChat]);
+
+  const handleNewChat = useCallback(() => {
+    dispatch(createNewChat());
+  }, [dispatch]);
+
+  const handleSelectChat = useCallback(
+    (id) => {
+      dispatch(setActiveChat(id));
+    },
+    [dispatch]
+  );
+
+  const handleSend = useCallback(
+    (text) => {
+      dispatch(sendMessage(text));
+    },
+    [dispatch]
+  );
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -41,13 +59,13 @@ export default function ChatPage() {
       <Sidebar
         chats={chats}
         activeChatId={activeChatId}
-        onNewChat={() => dispatch(createNewChat())}
-        onSelectChat={(id) => dispatch(setActiveChat(id))}
+        onNewChat={handleNewChat}
+        onSelectChat={handleSelectChat}
       />
 
       <main className="main">
         {messages.length === 0 ? (
-          <WelcomeView onPick={(text) => dispatch(sendMessage(text))} />
+          <WelcomeView onPick={handleSend} />
         ) : (
           <MessageList
             messages={messages}
@@ -56,7 +74,7 @@ export default function ChatPage() {
           />
         )}
 
-        <ChatInput loading={loading} onSend={(text) => dispatch(sendMessage(text))} />
+        <ChatInput loading={loading} onSend={handleSend} />
       </main>
     </div>
   );

@@ -1,10 +1,11 @@
-from datetime import datetime, timedelta
+import json
+import logging
+import re
+from datetime import UTC, datetime, timedelta
 from itertools import count
 from pathlib import Path
 from threading import Lock
-from typing import List, Optional
-import json
-import re
+from typing import Optional
 
 from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
@@ -16,31 +17,35 @@ from src.presentation.api.schemas.reminder import (
 )
 
 router = APIRouter(prefix="/reminders", tags=["reminders"])
+logger = logging.getLogger(__name__)
 
 _lock = Lock()
 _DATA_FILE = Path(__file__).resolve().parents[4] / "data" / "reminders.json"
 
 
-def _load_store() -> List[ReminderOut]:
+def _load_store() -> list[ReminderOut]:
     if not _DATA_FILE.exists():
         return []
+
     try:
         raw = json.loads(_DATA_FILE.read_text(encoding="utf-8"))
         if not isinstance(raw, list):
+            logger.warning("Reminder store is not a list. Resetting in-memory store.")
             return []
         return [ReminderOut.model_validate(item) for item in raw]
     except Exception:
+        logger.exception("Failed to load reminder store from disk")
         return []
 
 
-def _save_store(items: List[ReminderOut]) -> None:
+def _save_store(items: list[ReminderOut]) -> None:
     _DATA_FILE.parent.mkdir(parents=True, exist_ok=True)
     payload = [item.model_dump(mode="json") for item in items]
     _DATA_FILE.write_text(json.dumps(payload, indent=2), encoding="utf-8")
 
 
-_store: List[ReminderOut] = _load_store()
-_next_id = (max((item.id for item in _store), default=0) + 1)
+_store: list[ReminderOut] = _load_store()
+_next_id = max((item.id for item in _store), default=0) + 1
 _id_gen = count(_next_id)
 
 
@@ -134,20 +139,24 @@ def _extract_reminder_details(message: str) -> tuple[bool, Optional[str], Option
     return True, title, due_at
 
 
-@router.get("", response_model=List[ReminderOut])
+@router.get("", response_model=list[ReminderOut])
 def list_reminders():
     return sorted(_store, key=lambda r: (r.completed, r.due_at or datetime.max, r.created_at))
 
 
 @router.post("", response_model=ReminderOut)
 def create_reminder(payload: ReminderCreate):
+    title = payload.title.strip()
+    if not title:
+        raise HTTPException(status_code=400, detail="Reminder title cannot be empty")
+
     with _lock:
         item = ReminderOut(
             id=next(_id_gen),
-            title=payload.title.strip(),
+            title=title,
             completed=False,
             due_at=payload.due_at,
-            created_at=datetime.utcnow(),
+            created_at=datetime.now(UTC),
         )
         _store.append(item)
         _save_store(_store)
@@ -167,7 +176,7 @@ def extract_and_create_reminder(payload: ReminderExtractRequest):
             title=title,
             completed=False,
             due_at=due_at,
-            created_at=datetime.utcnow(),
+            created_at=datetime.now(UTC),
         )
         _store.append(item)
         _save_store(_store)

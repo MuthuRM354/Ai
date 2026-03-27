@@ -1,18 +1,36 @@
-# React + Vite
+# Atoooz AI Frontend
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+React + Vite frontend for the local AI chat assistant.
 
-Currently, two official plugins are available:
+## What it does
+- Chat UI with multiple local chat threads
+- Reminder sidebar with create, toggle, delete
+- Reminder-aware chat flow:
+  - If a message looks like a reminder command, the frontend calls the reminder extraction endpoint first
+  - On successful reminder extraction, it shows a confirmation message and skips the normal AI chat request
+  - Otherwise it sends the chat request to the backend AI endpoint
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+## Key files
+- `src/features/chat/ChatPage.jsx` - main page composition
+- `src/store/slices/chatSlice.js` - chat state and async send flow
+- `src/store/slices/reminderSlice.js` - reminder CRUD/extraction state
+- `src/api/chatApi.js` - chat API wrapper
+- `src/api/reminderApi.js` - reminder API wrapper
+- `src/api/request.js` - shared request helper
 
-## React Compiler
+## Commands
+- `npm install`
+- `npm run dev`
+- `npm run lint`
+- `npm run build`
+- `npm run preview`
 
-The React Compiler is enabled on this template. See [this documentation](https://react.dev/learn/react-compiler) for more information.
+## Environment
+Set `VITE_API_URL` if the backend is not running on the default:
 
-Note: This will impact Vite dev & build performances.
+- default backend URL: `http://127.0.0.1:8000`
 
-## Expanding the ESLint configuration
+Example `.env`:
 
-If you are developing a production application, we recommend using TypeScript with type-aware lint rules enabled. Check out the [TS template](https://github.com/vitejs/vite/tree/main/packages/create-vite/template-react-ts) for information on how to integrate TypeScript and [`typescript-eslint`](https://typescript-eslint.io) in your project.
+```env
+VITE_API_URL=http://127.0.0.1:8000
